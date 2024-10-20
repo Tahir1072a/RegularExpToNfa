@@ -1,0 +1,3 @@
+/home/tahir/Belgeler/Clion/RegularExpToNFA/cmake-build-debug/CMakeFiles/RegularExpToNFA.dir
+/home/tahir/Belgeler/Clion/RegularExpToNFA/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/tahir/Belgeler/Clion/RegularExpToNFA/cmake-build-debug/CMakeFiles/rebuild_cache.dir
