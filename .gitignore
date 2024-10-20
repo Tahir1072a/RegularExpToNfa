@@ -49,4 +49,8 @@
 modules.order
 Module.symvers
 Mkfile.old
+<<<<<<< HEAD
 dkms.conf
+=======
+dkms.conf
+>>>>>>> 667ece873b0c72bcf9d21abff86aaa6004d7e26f
