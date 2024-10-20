@@ -41,6 +41,12 @@
 *.su
 *.idb
 *.pdb
+/build/
+/CMakeBuild/
+/CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
 
 # Kernel Module Compile Results
 *.mod*
