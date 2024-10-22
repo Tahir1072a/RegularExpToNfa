@@ -7,59 +7,59 @@
 #define Split 256
 #define Match 257
 
-typedef struct State State;
-typedef struct Fragmentation Frag;
+typedef struct State state;
+typedef struct Fragmentation frag;
 typedef struct PointerList ptr_list;
-typedef struct StateList List;
+typedef struct StateList list;
 
 struct State {
     int c;
-    State *out;
-    State *out1;
-    int lastlist;
+    state *out;
+    state *out1;
+    int lastlist; //Diyagramı dolaşırken işimize yarayacak.
 };
 
 struct Fragmentation {
-    State *start;
+    state *start;
     ptr_list *outs;
 };
 
 struct PointerList {
-    State **out;
+    state **out;
     ptr_list *next;
 };
 
 struct StateList {
-    State **states;
+    state **states;
     int count;
 };
 
 //Global variables...
-State matchState = {Match, NULL, NULL};
-List l1 = {NULL, 0};
-List l2 = {NULL, 0};
+state matchState = {Match, NULL, NULL};
+list l1 = {NULL, 0};
+list l2 = {NULL, 0};
 int listid = 0;
 
 // Building NFA
-State* createState(int c, State *out, State *out1);
-Frag createFrag(State* start, ptr_list *outs);
-ptr_list* createList(State** out);
+state* createState(int c, state *out, state *out1);
+frag createFrag(state* start, ptr_list *outs);
+ptr_list* createList(state** out);
 ptr_list* append(ptr_list* l1, ptr_list* l2);
-void patch(ptr_list* l1, State* s);
-State* nfaBuilder(char* postfix);
+void patch(ptr_list* l1, state* s);
+state* nfaBuilder(char* postfix);
 
 // Word Controls
-int checkWord(State* start, char* word);
-int isMatch(List *l);
-void addState(List *l, State *s, int* listid);
-List* startList(State *s, List* l, int* listid);
-void Step(List* clist, int c, List* nlist);
+int checkWord(state* start, char* word);
+int isMatch(list *l);
+void addState(list *l, state *s, int* listid);
+list* startList(state *s, list* l, int* listid);
+void Step(list* clist, int c, list* nlist);
 
 //Convert infix to postfix
 char* convertToPostfix(char* infix);
 
 // Word production
-void wordProduction(char* alphabet, int numberOfWords, State* start);
+void wordProduction(char* alphabet, int numberOfWords, state* start);
 char* separateAlphabet(char* alphabet);
 
 int main() {
@@ -67,8 +67,8 @@ int main() {
     char p[1000], alphabet[40];
     int control = 1, numberOfWords = 0;
 
-    l1.states = malloc(sizeof(State*));
-    l2.states = malloc(sizeof(State*));
+    l1.states = malloc(sizeof(state*));
+    l2.states = malloc(sizeof(state*));
 
     printf("Lütfen üzerinde çalışılacak alfabeyi giriniz: Not: alfabeyi a,b,c,d şeklinde girin.\n");
     scanf("%s", alphabet);
@@ -76,7 +76,7 @@ int main() {
     scanf("%s", p);
     char* postfix = convertToPostfix(p);
     printf("İşlenecek olan postfix ifade: %s\n", postfix);
-    State *start = nfaBuilder(postfix);
+    state *start = nfaBuilder(postfix);
 
     printf("Ne işlemi yapmak istiyorsunuz?\n 1-Verdiğim kurala göre belli sayıda kelime üretmek istiyorum\n 2-Verdiğim kelimenin bu dile ait olup olmadığını öğrenmek istiyorum.\n");
     printf("Lütfen 1 yada 2 numaralı tuşa basınız...\n");
@@ -105,11 +105,12 @@ int main() {
             break;
     }
 
+    free(start);
     return 0;
 }
 
-ptr_list* createList(State** out) {
-    ptr_list* list = (ptr_list*)malloc(sizeof(ptr_list));
+ptr_list* createList(state** out) {
+    ptr_list* list = malloc(sizeof(ptr_list));
 
     list->out = out;
     list->next = NULL;
@@ -117,31 +118,41 @@ ptr_list* createList(State** out) {
     return list;
 }
 
+/// İkinci parametre'de gelen listeyi ilk listenin sonuna ekler / Adds the list from the second parameter to the end of the first list
+/// @param l1
+/// @param l2
+/// @return A new merged list
 ptr_list* append(ptr_list* l1, ptr_list* l2) {
-    ptr_list* head;
+    if(l1 == NULL) return l2;
 
-    if(l1 == NULL) return head = l2;
-    head = l1;
-    while (head->next != NULL) head = head->next;
-    head->next = l2;
+    ptr_list *ptr = l1;
+    while (ptr->next != NULL) ptr = ptr->next;
+    ptr->next = l2;
 
     return l1;
 }
 
-// Parametre olarak aldığı pointer listesini ki bu boşta kalan okları temsil eder, bunları belirtilen state'e bağlar.
-void patch(ptr_list* l1, State* s) {
+/// Parametre olarak aldığı pointer listesini ki bu boşta kalan okları temsil eder, bunları belirtilen state'e bağlar.
+/// @param l1 Bağlanacak okları tutan liste
+/// @param s  Bağlanılacak state
+void patch(ptr_list* l1, state* s) {
     if(l1 == NULL) return; //Liste boş olması durumda bağlanacak ok yoktur.
-    ptr_list *next;
+
     while (l1 != NULL) {
         *(l1->out) = s; //Artık ilgili ok bir adresi gösteriyor. Önceden null bir değeri gösteriyordu.
         l1 = l1->next;
     }
 
-    free(l1);
+    free(l1); //Liste artık kullanılmayacak.
 }
 
-State* createState(int c, State* out, State* out1) {
-    State* s = (State*)malloc(sizeof(State));
+/// Yeni bir state oluşturur.
+/// @param c state'den çıkan yolun değerini belirler.
+/// @param out ilgili state'den çıkan birinci oku tutar.
+/// @param out1 ilgili state'den çıkan ikinci oku tutar.
+/// @return
+state* createState(int c, state* out, state* out1) {
+    state* s = malloc(sizeof(state));
     s->c = c;
     s->out = out;
     s->out1 = out1;
@@ -149,17 +160,23 @@ State* createState(int c, State* out, State* out1) {
     return s;
 }
 
-Frag createFrag(State* start, ptr_list* outs) {
-    Frag fragment = {start, outs};
+/// İlgili nfa grafının/diyagramının başlangıç düğümünü ve boşta sallanan oklarını tutan bir fragment oluşturur.
+/// @param start
+/// @param outs
+/// @return Bir fragment döner. Fragmentlar küçük nfa diyagramlarıdır/graflarıdır..
+frag createFrag(state* start, ptr_list* outs) {
+    frag fragment = {start, outs};
     return fragment;
 }
 
-// Epsilon yollarıda içeren bir nfa diyagramı oluşturur.
-State* nfaBuilder(char* postfix) {
+///  Epsilon yollarıda içeren bir nfa diyagramı oluşturur.
+/// @param postfix bir postfi ifadeye göre işlem yapar.
+/// @return Nfa diyagramının başlangıç state'ini döner.
+state* nfaBuilder(char* postfix) {
     char *p; // Pointer for the postfix exp.
     // Kullanılacak veri yapıları
-    Frag stack[1000], *stackp, e1, e2;
-    State* s;
+    frag stack[1000], *stackp, e1, e2;
+    state* s;
     //Stack func.
     #define Push(s) *stackp++ = s;
     #define Pop() *--stackp;
@@ -195,17 +212,17 @@ State* nfaBuilder(char* postfix) {
                 break;
         }
     }
-    // Buradaki işlem artık stack içinde tek bir fragment kalmış ise ilgili fragment'ın sallanan oklarının herhangi bir state bağlanma zorunluluğu
-    // olmadığını gösterir. Bunun anlamı ise bu oklar final state bağlanması gerekir.
+    // Stack içinde kalan son fragment parçası tüm kurallı yolları oluşturulmuş bir nfa diyagramı içerir. Buda sallanan oklarının herhangi bir state
+    // bağlanma zorunluluğu olmadığını gösterir. Bunun anlamı ise bu oklar final state bağlanması gerekir.
     e1 = Pop();
     patch(e1.outs, &matchState); //Okları önceden tanımlanmış matchState'e bağlar.
       return e1.start;
 }
 
-int checkWord(State* start, char* word) {
+int checkWord(state* start, char* word) {
     if (word == NULL) return 0;
 
-    List *clist, *nlist, *t;
+    list *clist, *nlist, *t;
     clist = startList(start, &l1, &listid);
     nlist = &l2;
     for(; *word; word++) {
@@ -213,17 +230,19 @@ int checkWord(State* start, char* word) {
         t = clist;
         clist = nlist;
         nlist = t;
+
+        if (clist->count == 0) return 0; // refactoring for performance...
     }
     return isMatch(clist);
 }
-int isMatch(List *l) {
+int isMatch(list *l) {
     for (int i = 0; l->count > i; i++) {
         if(l->states[i] == &matchState) return 1;
     }
     return 0;
 }
 
-void addState(List *l, State *s, int* listid) {
+void addState(list *l, state *s, int* listid) {
     if(s == NULL || s->lastlist == *listid) return;
     s->lastlist = *listid;
     if(s->c == Split) {
@@ -234,15 +253,15 @@ void addState(List *l, State *s, int* listid) {
     l->states[l->count++] = s;
 }
 
-List* startList(State *s, List* l, int* listid) {
+list* startList(state *s, list* l, int* listid) {
     (*listid)++;
     l->count = 0;
     addState(l,s, listid);
     return l;
 }
-
-void Step(List* clist, int c, List* nlist) {
-    State *s;
+// Kısaca ilgili yürütme işlemi yapar. Yani ilgli durumdan geçilebilecek durumları hesaplar ve bunları nlist içine atar.
+void Step(list* clist, int c, list* nlist) {
+    state *s;
     listid++;
     nlist->count = 0;
     for(int i = 0; i < clist->count; i++) {
@@ -335,7 +354,7 @@ int isWordInArray(char** words, int count, const char* word) {
     return 0; // Kelime bulunamadı
 }
 
-void wordProduction(char* alphabet, int numberOfWords, State* start) {
+void wordProduction(char* alphabet, int numberOfWords, state* start) {
     char* setOfAlphabet = separateAlphabet(alphabet);
     char  word[100] = "";
     char** words = (char**)malloc((numberOfWords + 1) * sizeof(char*));
